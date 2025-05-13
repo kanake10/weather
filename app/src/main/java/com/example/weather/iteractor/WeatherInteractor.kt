@@ -1,6 +1,5 @@
 package com.example.weather.iteractor
 
-import android.util.Log
 import com.example.weather.utils.Resource
 import com.example.weather.api.OpenWeatherApi
 import com.example.weather.api.dto.current.toEntity
@@ -11,7 +10,8 @@ import com.example.weather.db.entities.CurrentWeatherModel
 import com.example.weather.db.entities.ForecastModel
 import com.example.weather.utils.NetworkHelper
 import com.example.weather.utils.safeApiCall
-import jakarta.inject.Inject
+import timber.log.Timber
+import javax.inject.Inject
 
 interface WeatherRepo {
     suspend fun getCurrentWeatherCondition(city: String): Resource<CurrentWeatherModel>
@@ -27,39 +27,55 @@ class WeatherRepoImpl @Inject constructor(
 
     override suspend fun getCurrentWeatherCondition(city: String): Resource<CurrentWeatherModel> {
         val cached = currentWeatherDao.getWeather(city)
+        Timber.d("Cached current weather for $city: $cached")
 
         return if (networkHelper.isConnected()) {
+            Timber.d("Fetching current weather from API for $city")
             val apiResult = safeApiCall {
                 val result = openWeatherApi.getCurrentWeather(city)
                 val entity = result.toEntity()
                 currentWeatherDao.insertWeather(entity)
+                Timber.d("Saved current weather to DB for $city: $entity")
                 entity
+            }
+
+            if (apiResult is Resource.Error) {
+                Timber.e("Error fetching current weather: ${apiResult.message}")
             }
 
             apiResult
         } else {
-            cached?.let { Resource.Success(it) }
-                ?: Resource.Error("No cached data available and no internet")
+            cached?.let {
+                Timber.d("Returning cached current weather for $city")
+                Resource.Success(it)
+            } ?: Resource.Error("No internet connection")
         }
     }
 
     override suspend fun getFiveDayWeatherCondition(city: String): Resource<List<ForecastModel>> {
         val cached = forecastWeatherDao.getForecast(city)
-        cached?.let {
-            Log.d("WeatherRepoLog", "Loaded cached forecast data: $it")
-        }
+        Timber.d("Cached forecast for $city: $cached")
 
-        if (networkHelper.isConnected()) {
-            safeApiCall {
+        return if (networkHelper.isConnected()) {
+            Timber.d("Fetching 5-day forecast from API for $city")
+            val apiResult = safeApiCall {
                 val result = openWeatherApi.getFiveDayForecast(city)
                 val entity = result.toEntity()
                 forecastWeatherDao.insertForecasts(entity)
+                Timber.d("Saved 5-day forecast to DB for $city: $entity")
                 listOf(entity)
             }
+
+            if (apiResult is Resource.Error) {
+                Timber.e("Error fetching 5-day forecast: ${apiResult.message}")
+            }
+
+            apiResult
+        } else {
+            cached?.let {
+                Timber.d("Returning cached forecast for $city")
+                Resource.Success(listOf(it))
+            } ?: Resource.Error("No internet connection")
         }
-
-        return cached?.let { Resource.Success(listOf(it)) }
-            ?: Resource.Error("No cached forecast data and no internet")
     }
-
 }

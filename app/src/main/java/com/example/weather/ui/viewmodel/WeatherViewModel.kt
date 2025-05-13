@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.State
 import com.example.weather.api.dto.forecast.WeatherModel
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,30 +35,39 @@ class WeatherViewModel @Inject constructor(
 
     fun searchWeather() {
         viewModelScope.launch {
+            val query = _searchQuery.value
+
             _currentState.value = WeatherUiState(isLoading = true)
             _forecastState.value = WeatherUiState(isLoading = true)
 
-            when (val result = weatherRepo.getCurrentWeatherCondition(_searchQuery.value)) {
+            when (val result = weatherRepo.getCurrentWeatherCondition(query)) {
                 is Resource.Success -> {
+                    Timber.d("Current weather fetched successfully: ${result.data}")
                     _currentState.value = WeatherUiState(weather = result.data)
                 }
                 is Resource.Error -> {
+                    Timber.e("Error fetching current weather: ${result.message}")
                     _currentState.value = WeatherUiState(errorMessage = result.message)
                 }
-                else -> Unit
+                else -> Timber.w("Unexpected state in current weather fetch")
             }
 
-            when (val forecastResult = weatherRepo.getFiveDayWeatherCondition(_searchQuery.value)) {
+            when (val forecastResult = weatherRepo.getFiveDayWeatherCondition(query)) {
                 is Resource.Success -> {
                     val rawForecasts = forecastResult.data ?: emptyList()
                     val allItems = rawForecasts.flatMap { it.list }
+                    Timber.d("Forecast fetched successfully. Items count: ${allItems.size}")
+
                     val filteredForecast = filterDailyForecasts(allItems)
+                    Timber.d("Filtered forecast count: ${filteredForecast.size}")
+
                     _forecastState.value = WeatherUiState(forecast = filteredForecast)
                 }
                 is Resource.Error -> {
+                    Timber.e("Error fetching forecast: ${forecastResult.message}")
                     _forecastState.value = WeatherUiState(errorMessage = forecastResult.message)
                 }
-                else -> Unit
+                else -> Timber.w("Unexpected state in forecast fetch")
             }
         }
     }
@@ -69,8 +79,12 @@ class WeatherViewModel @Inject constructor(
                 dayItems.find { it.dt_txt.contains("12:00:00") }
                     ?: dayItems.getOrNull(dayItems.size / 2)
             }
+            .also {
+                Timber.d("Filtered to ${it.size} daily forecasts")
+            }
     }
 }
+
 
 data class WeatherUiState(
     val isLoading: Boolean = false,

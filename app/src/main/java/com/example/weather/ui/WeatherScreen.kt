@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import com.example.weather.R
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,6 +25,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -95,16 +99,22 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                     TextField(
                         value = viewModel.searchQuery.value,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        label = {
+                        placeholder = {
                             Text(
                                 text = "Search Your City",
-                                maxLines = 1,
+                                maxLines = 1
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search Icon"
                             )
                         },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
-                        shape = RectangleShape,
+                        shape = RoundedCornerShape(12.dp),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(
@@ -125,14 +135,16 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                             text = "Current Weather",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                         )
                         CurrentWeatherCard(weather)
                     }
 
                     currentState.errorMessage?.let {
-                        Text("Error: $it", color = Color.Red)
+                        Text(it, color = Color.Red)
                     }
+
                 }
 
                 if (forecastState.isLoading) {
@@ -142,6 +154,7 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                         Text(
                             text = "5-Day Forecast",
                             fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontSize = 18.sp,
                             modifier = Modifier
                                 .padding(top = 16.dp),
@@ -158,10 +171,6 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                         }
 
                     }
-//
-//                    forecastState.errorMessage?.let {
-//                        Text("Error: $it", color = Color.Red)
-//                    }
                 }
             }
         }
@@ -230,8 +239,6 @@ fun CurrentWeatherCard(weather: CurrentWeatherModel) {
         }
     }
 }
-
-
 
 @Composable
 fun ForecastItemView(forecastItem: WeatherModel) {
