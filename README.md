@@ -25,7 +25,7 @@ This project is an Android application that fetches and displays weather data fr
 ### 1. Clone the Repository
 Clone this repository to your local machine using the following command:
 ```
-git clone https://github.com/kanake10/weather-app.git
+git clone https://github.com/kanake10/weather.git
 ```
 - Sync the project to download dependencies.
 - Run the project on an emulator or a physical device.
