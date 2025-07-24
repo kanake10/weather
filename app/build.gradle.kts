@@ -1,3 +1,7 @@
+import java.util.Properties
+import java.io.File
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +9,12 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.devtools.ksp)
 }
+val localProperties = Properties().apply {
+    load(File(rootDir, "local.properties").inputStream())
+}
+
+val apiKey: String = localProperties.getProperty("API_KEY") ?: ""
+val baseUrl: String = localProperties.getProperty("BASE_URL") ?: ""
 
 android {
     namespace = "com.example.weather"
@@ -19,30 +29,33 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        buildConfigField("String", "API_KEY", "\"$apiKey\"")
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
+
     }
     buildFeatures {
         buildConfig = true
     }
 
-
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+
     }
     ksp {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -86,6 +99,4 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
-
-
 }

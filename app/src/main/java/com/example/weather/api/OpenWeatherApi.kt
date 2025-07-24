@@ -1,8 +1,8 @@
 package com.example.weather.api
 
+import com.example.weather.BuildConfig.API_KEY
 import com.example.weather.api.dto.current.WeatherResponse
 import com.example.weather.api.dto.forecast.ForecastResponse
-import com.example.weather.utils.API_KEY
 import com.example.weather.utils.UNITS
 import retrofit2.http.GET
 import retrofit2.http.Query

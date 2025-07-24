@@ -2,13 +2,13 @@ package com.example.weather.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.weather.BuildConfig.BASE_URL
 import com.example.weather.api.OpenWeatherApi
 import com.example.weather.db.WeatherDatabase
 import com.example.weather.db.dao.CurrentWeatherDao
 import com.example.weather.db.dao.ForecastWeatherDao
 import com.example.weather.iteractor.WeatherRepo
 import com.example.weather.iteractor.WeatherRepoImpl
-import com.example.weather.utils.BASE_URL
 import com.example.weather.utils.DB
 import com.example.weather.utils.NetworkHelper
 import dagger.Module
