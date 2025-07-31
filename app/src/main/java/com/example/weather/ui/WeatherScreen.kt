@@ -1,10 +1,12 @@
 package com.example.weather.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -13,7 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import com.example.weather.R
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,15 +31,26 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,22 +65,31 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.weather.api.dto.forecast.WeatherModel
 import com.example.weather.db.entities.CurrentWeatherModel
+import com.example.weather.ui.viewmodel.FavoriteCitiesViewModel
 import com.example.weather.ui.viewmodel.WeatherViewModel
 import com.example.weather.utils.formatDate
 import com.example.weather.utils.formatTimestamp
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
+fun WeatherScreen(
+    viewModel: WeatherViewModel = hiltViewModel(),
+    favoritesViewModel: FavoriteCitiesViewModel = hiltViewModel()) {
     val currentState by viewModel.currentState.collectAsStateWithLifecycle()
     val forecastState by viewModel.forecastState.collectAsStateWithLifecycle()
+    val favoriteCities by favoritesViewModel.favoriteCities.collectAsStateWithLifecycle()
+
+    val scope = rememberCoroutineScope()
+    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showBottomSheet by rememberSaveable { mutableStateOf(false) }
+
+
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text("Weather App")
-                },
+                title = { Text("Weather App") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -72,10 +97,11 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
         }
     ) { innerPadding ->
 
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
-
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.weather_background),
                 contentDescription = null,
@@ -88,7 +114,6 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                     .fillMaxSize()
                     .padding(36.dp)
             ) {
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -98,12 +123,7 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                     TextField(
                         value = viewModel.searchQuery.value,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = {
-                            Text(
-                                text = "Search Your City",
-                                maxLines = 1
-                            )
-                        },
+                        placeholder = { Text("Search Your City", maxLines = 1) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
@@ -125,6 +145,30 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                         )
                     )
                 }
+                if (favoriteCities.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Favorite Cities:",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        items(favoriteCities) { city ->
+                            AssistChip(
+                                onClick = {
+                                    viewModel.onSearchQueryChanged(city.name)
+                                    viewModel.searchWeather()
+                                },
+                                label = { Text(city.name) }
+                            )
+                        }
+                    }
+                }
+
 
                 if (currentState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
@@ -137,48 +181,89 @@ fun WeatherScreen(viewModel: WeatherViewModel = hiltViewModel()) {
                             color = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                         )
-                        CurrentWeatherCard(weather)
+                        CurrentWeatherCard(
+                            weather = weather,
+                            onClick = {
+                                if (!forecastState.forecast.isNullOrEmpty()) {
+                                    showBottomSheet = true
+                                    scope.launch {
+                                        bottomSheetState.show()
+                                    }
+                                }
+                            }
+                        )
                     }
 
                     currentState.errorMessage?.let {
                         Text(it, color = Color.Red)
                     }
-
                 }
+            }
 
-                if (forecastState.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
-                } else {
+            if (showBottomSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = { showBottomSheet = false },
+                    sheetState = bottomSheetState,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
                     forecastState.forecast?.let { forecastList ->
-                        Text(
-                            text = "5-Day Forecast",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontSize = 18.sp,
-                            modifier = Modifier
-                                .padding(top = 16.dp),
-                        )
-                        LazyColumn(
+                        val cityName = currentState.weather?.name ?: ""
+                        val alreadyFavorite = favoriteCities.any { it.name.equals(cityName, ignoreCase = true) }
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            itemsIndexed(forecastList) { _, forecastItem ->
-                                ForecastItemView(forecastItem = forecastItem)
+                            Text(
+                                text = "$cityName 5-Day Forecast",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            if (cityName.isNotEmpty() && !alreadyFavorite) {
+                                IconButton(
+                                    onClick = {
+                                        favoritesViewModel.addFavoriteCity(cityName)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add city",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
 
+                        LazyColumn(
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(forecastList) { forecastItem ->
+                                ForecastItemView(
+                                    forecastItem = forecastItem,
+                                    cityName = cityName,
+                                )
+                            }
+                        }
+                    } ?: run {
+                        Text(
+                            text = "No forecast data available.",
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
                 }
             }
+
         }
     }
 }
 
-
 @Composable
-fun CurrentWeatherCard(weather: CurrentWeatherModel) {
+fun CurrentWeatherCard(weather: CurrentWeatherModel, onClick: () -> Unit) {
     val iconCode = weather.weather?.firstOrNull()?.icon
     val iconUrl = "https://openweathermap.org/img/wn/${iconCode}@2x.png"
     val lastUpdatedFormatted = formatTimestamp(weather.lastUpdated)
@@ -186,7 +271,8 @@ fun CurrentWeatherCard(weather: CurrentWeatherModel) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation()
     ) {
         Box(
@@ -209,14 +295,14 @@ fun CurrentWeatherCard(weather: CurrentWeatherModel) {
                     Text(
                         text = weather.weather?.firstOrNull()?.description.orEmpty()
                             .replaceFirstChar { it.uppercaseChar() },
-                        fontSize = 14.sp,
+                        fontSize = 14.sp
                     )
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = lastUpdatedFormatted,
-                        fontSize = 12.sp,
+                        fontSize = 12.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -226,6 +312,7 @@ fun CurrentWeatherCard(weather: CurrentWeatherModel) {
                     )
                 }
             }
+
             iconCode?.let {
                 Image(
                     painter = rememberAsyncImagePainter(iconUrl),
@@ -239,8 +326,12 @@ fun CurrentWeatherCard(weather: CurrentWeatherModel) {
     }
 }
 
+
 @Composable
-fun ForecastItemView(forecastItem: WeatherModel) {
+fun ForecastItemView(
+    forecastItem: WeatherModel,
+    cityName: String
+) {
     val formattedDate = formatDate(forecastItem.dt_txt)
     val iconCode = forecastItem.weather.firstOrNull()?.icon
     val iconUrl = "https://openweathermap.org/img/wn/${iconCode}@2x.png"
@@ -262,10 +353,7 @@ fun ForecastItemView(forecastItem: WeatherModel) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = formattedDate,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = formattedDate, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("${forecastItem.main.temp} °C")
                 Spacer(modifier = Modifier.height(4.dp))
@@ -278,12 +366,18 @@ fun ForecastItemView(forecastItem: WeatherModel) {
                 }
             }
 
-            iconCode?.let {
-                Image(
-                    painter = rememberAsyncImagePainter(iconUrl),
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp)
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                iconCode?.let {
+                    Image(
+                        painter = rememberAsyncImagePainter(iconUrl),
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
             }
         }
     }

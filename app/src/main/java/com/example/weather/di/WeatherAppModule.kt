@@ -6,7 +6,10 @@ import com.example.weather.BuildConfig.BASE_URL
 import com.example.weather.api.OpenWeatherApi
 import com.example.weather.db.WeatherDatabase
 import com.example.weather.db.dao.CurrentWeatherDao
+import com.example.weather.db.dao.FavoriteCityDao
 import com.example.weather.db.dao.ForecastWeatherDao
+import com.example.weather.iteractor.FavoriteInteractor
+import com.example.weather.iteractor.FavoriteInteractorImpl
 import com.example.weather.iteractor.WeatherRepo
 import com.example.weather.iteractor.WeatherRepoImpl
 import com.example.weather.utils.DB
@@ -65,6 +68,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideFavoriteCityDaoDao(weatherDatabase: WeatherDatabase): FavoriteCityDao {
+        return weatherDatabase.favoriteCityDao
+    }
+
+    @Provides
+    @Singleton
     fun provideWeatherRepo(
         openWeatherApi: OpenWeatherApi,
         currentWeatherDao: CurrentWeatherDao,
@@ -72,6 +81,14 @@ object AppModule {
         networkHelper: NetworkHelper
     ): WeatherRepo {
         return WeatherRepoImpl(openWeatherApi, currentWeatherDao, forecastWeatherDao, networkHelper)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFavoritesInteractor(
+        favoriteCityDao: FavoriteCityDao
+    ): FavoriteInteractor {
+        return FavoriteInteractorImpl (favoriteCityDao)
     }
 
     @Provides

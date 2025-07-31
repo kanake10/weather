@@ -81,7 +81,7 @@ class WeatherViewModel @Inject constructor(
             }
             .also {
                 Timber.d("Filtered to ${it.size} daily forecasts")
-            }
+        }
     }
 }
 
