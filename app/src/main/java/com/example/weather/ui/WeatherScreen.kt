@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -62,9 +63,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.weather.api.dto.forecast.WeatherModel
 import com.example.weather.db.entities.CurrentWeatherModel
+import com.example.weather.db.entities.FavoriteCityEntity
 import com.example.weather.ui.viewmodel.FavoriteCitiesViewModel
 import com.example.weather.ui.viewmodel.WeatherViewModel
 import com.example.weather.utils.formatDate
@@ -145,30 +148,6 @@ fun WeatherScreen(
                         )
                     )
                 }
-                if (favoriteCities.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Favorite Cities:",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    ) {
-                        items(favoriteCities) { city ->
-                            AssistChip(
-                                onClick = {
-                                    viewModel.onSearchQueryChanged(city.name)
-                                    viewModel.searchWeather()
-                                },
-                                label = { Text(city.name) }
-                            )
-                        }
-                    }
-                }
-
 
                 if (currentState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
@@ -198,6 +177,32 @@ fun WeatherScreen(
                         Text(it, color = Color.Red)
                     }
                 }
+                if (favoriteCities.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Favorite Cities:",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    ) {
+                        items(favoriteCities) { city ->
+                            FavoriteCityCard(
+                                city = city,
+                                onClick = {
+                                    viewModel.onSearchQueryChanged(city.name)
+                                    viewModel.searchWeather()
+                                }
+                            )
+                        }
+                    }
+
+                }
             }
 
             if (showBottomSheet) {
@@ -209,44 +214,79 @@ fun WeatherScreen(
                     forecastState.forecast?.let { forecastList ->
                         val cityName = currentState.weather?.name ?: ""
                         val alreadyFavorite = favoriteCities.any { it.name.equals(cityName, ignoreCase = true) }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "$cityName 5-Day Forecast",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
 
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            if (cityName.isNotEmpty() && !alreadyFavorite) {
-                                IconButton(
-                                    onClick = {
-                                        favoritesViewModel.addFavoriteCity(cityName)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Top row with Add and Cancel icons
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (cityName.isNotEmpty() && !alreadyFavorite) {
+                                    IconButton(onClick = {
+                                        if (cityName.isNotEmpty()) {
+                                            currentState.weather?.let { weather ->
+                                                val favoriteCity = FavoriteCityEntity(
+                                                    id = weather.id,
+                                                    name = weather.name,
+                                                    main = weather.main,
+                                                    wind = weather.wind,
+                                                    weather = weather.weather,
+                                                    lastUpdated = System.currentTimeMillis()
+                                                )
+                                                favoritesViewModel.addCityToFavorites(favoriteCity)
+                                                scope.launch {
+                                                    bottomSheetState.hide()
+                                                    showBottomSheet = false
+                                                }
+                                            }
+                                        }
+                                    }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Add city",
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     }
-                                ) {
+                                }
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        bottomSheetState.hide()
+                                        showBottomSheet = false
+                                    }
+                                }) {
                                     Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Add city",
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Cancel",
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }
-                        }
 
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(forecastList) { forecastItem ->
-                                ForecastItemView(
-                                    forecastItem = forecastItem,
-                                    cityName = cityName,
-                                )
+                            // City name and 5-day forecast label
+                            Text(
+                                text = "$cityName 5-Day Forecast",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+
+                            // Forecast list
+                            LazyColumn(
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(forecastList) { forecastItem ->
+                                    ForecastItemView(
+                                        forecastItem = forecastItem,
+                                        cityName = cityName,
+                                    )
+                                }
                             }
                         }
                     } ?: run {
@@ -382,3 +422,50 @@ fun ForecastItemView(
         }
     }
 }
+
+@Composable
+fun FavoriteCityCard(
+    city: FavoriteCityEntity,
+    onClick: () -> Unit
+) {
+    val iconUrl = "https://openweathermap.org/img/wn/${city.weather.firstOrNull()?.icon}@2x.png"
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Weather icon
+            AsyncImage(
+                model = iconUrl,
+                contentDescription = city.weather.firstOrNull()?.description,
+                modifier = Modifier.size(48.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column {
+                Text(text = city.name, fontWeight = FontWeight.Bold)
+                Text(
+                    text = city.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercaseChar() } ?: "",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = "${city.main.temp.toInt()}°C",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+}
+
