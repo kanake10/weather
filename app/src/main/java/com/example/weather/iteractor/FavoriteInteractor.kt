@@ -6,27 +6,29 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 interface FavoriteInteractor {
-    suspend fun saveFavoriteCity(city: FavoriteCityEntity)
-    suspend fun removeFavoriteCity(city: FavoriteCityEntity)
-    fun getFavoriteCities(): Flow<List<FavoriteCityEntity>>
-    fun isFavoriteCity(city: FavoriteCityEntity): Flow<Boolean>
+    suspend fun addFavoriteCity(city: FavoriteCityEntity)
+    suspend fun getAllFavoriteCities(): List<FavoriteCityEntity>
+    suspend fun deleteFavoriteCity(city: FavoriteCityEntity)
+    suspend fun isCityFavorite(cityName: String): Boolean
 }
 
 class FavoriteInteractorImpl @Inject constructor(
     private val dao: FavoriteCityDao
 ) : FavoriteInteractor {
 
-    override suspend fun saveFavoriteCity(city: FavoriteCityEntity) {
+    override suspend fun addFavoriteCity(city: FavoriteCityEntity) {
         dao.insertFavoriteCity(city)
     }
 
-    override suspend fun removeFavoriteCity(city: FavoriteCityEntity) {
+    override suspend fun getAllFavoriteCities(): List<FavoriteCityEntity> {
+        return dao.getAllFavorites()
+    }
+
+    override suspend fun deleteFavoriteCity(city: FavoriteCityEntity) {
         dao.deleteFavoriteCity(city)
     }
 
-    override fun getFavoriteCities(): Flow<List<FavoriteCityEntity>> = dao.getFavoriteCities()
-
-    override fun isFavoriteCity(city: FavoriteCityEntity): Flow<Boolean> {
-        return dao.isFavoriteCity(city.name)
+    override suspend fun isCityFavorite(cityName: String): Boolean {
+        return dao.isFavorite(cityName)
     }
 }

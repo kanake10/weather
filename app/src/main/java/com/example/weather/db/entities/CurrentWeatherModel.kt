@@ -16,7 +16,12 @@ data class CurrentWeatherModel(
     val lastUpdated: Long
 )
 
-@Entity(tableName = "favorite_cities")
+@Entity(tableName = "favorite")
 data class FavoriteCityEntity(
-    @PrimaryKey val name: String
+    val weather: List<Weather>,
+    val name: String,
+    @PrimaryKey val id: Int,
+    val wind: Wind,
+    val main: Main,
+    val lastUpdated: Long
 )

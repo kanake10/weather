@@ -11,7 +11,7 @@ import com.example.weather.db.entities.CurrentWeatherModel
 import com.example.weather.db.entities.FavoriteCityEntity
 import com.example.weather.db.entities.ForecastModel
 
-@Database(entities = [CurrentWeatherModel::class, ForecastModel::class, FavoriteCityEntity::class], version = 5)
+@Database(entities = [CurrentWeatherModel::class, ForecastModel::class, FavoriteCityEntity::class], version = 6)
 @TypeConverters(WeatherTypeConverters::class)
 abstract class WeatherDatabase : RoomDatabase() {
     abstract val currentWeatherDao: CurrentWeatherDao

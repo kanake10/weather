@@ -6,18 +6,21 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.weather.db.entities.FavoriteCityEntity
-import kotlinx.coroutines.flow.Flow
 @Dao
 interface FavoriteCityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFavoriteCity(city: FavoriteCityEntity)
+    suspend fun insertFavoriteCity(entity: FavoriteCityEntity)
+
+    @Query("SELECT * FROM favorite ORDER BY lastUpdated DESC")
+    suspend fun getAllFavorites(): List<FavoriteCityEntity>
 
     @Delete
-    suspend fun deleteFavoriteCity(city: FavoriteCityEntity)
+    suspend fun deleteFavoriteCity(entity: FavoriteCityEntity)
 
-    @Query("SELECT * FROM favorite_cities")
-    fun getFavoriteCities(): Flow<List<FavoriteCityEntity>>
+    @Query("DELETE FROM favorite")
+    suspend fun clearFavorites()
 
-    @Query("SELECT EXISTS(SELECT 1 FROM favorite_cities WHERE name = :cityName)")
-    fun isFavoriteCity(cityName: String): Flow<Boolean>
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite WHERE name = :city COLLATE NOCASE)")
+    suspend fun isFavorite(city: String): Boolean
+
 }

@@ -5,63 +5,70 @@ import androidx.lifecycle.viewModelScope
 import com.example.weather.db.entities.FavoriteCityEntity
 import com.example.weather.iteractor.FavoriteInteractor
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class FavoriteCitiesViewModel @Inject constructor(
-    private val favoriteInteractor: FavoriteInteractor
+    private val repository: FavoriteInteractor
 ) : ViewModel() {
 
     private val _favoriteCities = MutableStateFlow<List<FavoriteCityEntity>>(emptyList())
     val favoriteCities: StateFlow<List<FavoriteCityEntity>> = _favoriteCities.asStateFlow()
 
-    private val _isFavoriteMap = MutableStateFlow<Map<String, Boolean>>(emptyMap())
-    val isFavoriteMap: StateFlow<Map<String, Boolean>> = _isFavoriteMap.asStateFlow()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        observeFavorites()
+        loadFavoriteCities()
     }
 
-     fun observeFavorites() {
+    fun loadFavoriteCities() {
         viewModelScope.launch {
-            favoriteInteractor.getFavoriteCities().collect { cities ->
-                _favoriteCities.value = cities
-                _isFavoriteMap.value = cities.associate { it.name to true }
+            _isLoading.value = true
+            _error.value = null
+            try {
+                _favoriteCities.value = repository.getAllFavoriteCities()
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    fun addFavoriteCity(cityName: String) {
+    fun addCityToFavorites(city: FavoriteCityEntity) {
         viewModelScope.launch {
-            favoriteInteractor.saveFavoriteCity(FavoriteCityEntity(cityName))
-        }
-    }
-
-    fun removeFavoriteCity(cityName: String) {
-        viewModelScope.launch {
-            favoriteInteractor.removeFavoriteCity(FavoriteCityEntity(cityName))
-        }
-    }
-
-    fun toggleFavoriteCity(cityName: String) {
-        viewModelScope.launch {
-            favoriteInteractor.isFavoriteCity(FavoriteCityEntity(cityName)).first().let { isFav ->
-                if (isFav) {
-                    favoriteInteractor.removeFavoriteCity(FavoriteCityEntity(cityName))
-                } else {
-                    favoriteInteractor.saveFavoriteCity(FavoriteCityEntity(cityName))
-                }
+            try {
+                repository.addFavoriteCity(city)
+                loadFavoriteCities()
+            } catch (e: Exception) {
+                _error.value = e.message
             }
         }
     }
 
-    fun isFavoriteCityFlow(cityName: String): Flow<Boolean> {
-        return favoriteInteractor.isFavoriteCity(FavoriteCityEntity(cityName))
+    fun deleteFavoriteCity(city: FavoriteCityEntity) {
+        viewModelScope.launch {
+            try {
+                repository.deleteFavoriteCity(city)
+                loadFavoriteCities()
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
+    fun isCityFavorite(cityName: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.isCityFavorite(cityName)
+            onResult(result)
+        }
     }
 }
