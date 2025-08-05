@@ -13,6 +13,9 @@ import androidx.compose.runtime.State
 import com.example.weather.api.dto.forecast.WeatherModel
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -61,7 +64,10 @@ class WeatherViewModel @Inject constructor(
                     val filteredForecast = filterDailyForecasts(allItems)
                     Timber.d("Filtered forecast count: ${filteredForecast.size}")
 
-                    _forecastState.value = WeatherUiState(forecast = filteredForecast)
+                    _forecastState.value = WeatherUiState(
+                        forecast = filterDailyForecasts(allItems),
+                        hourlyForecast = filterNextTwoDaysHourlyForecast(allItems)
+                    )
                 }
                 is Resource.Error -> {
                     Timber.e("Error fetching forecast: ${forecastResult.message}")
@@ -83,12 +89,25 @@ class WeatherViewModel @Inject constructor(
                 Timber.d("Filtered to ${it.size} daily forecasts")
         }
     }
+
+    private fun filterNextTwoDaysHourlyForecast(allItems: List<WeatherModel>): List<WeatherModel> {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val currentDate = dateFormat.parse(dateFormat.format(Date())) ?: return allItems
+
+        return allItems.filter { item ->
+            val forecastDate = dateFormat.parse(item.dt_txt.substring(0, 10))
+            if (forecastDate != null) {
+                val diff = ((forecastDate.time - currentDate.time) / (1000 * 60 * 60 * 24)).toInt()
+                diff in 0..1 // Today and tomorrow
+            } else false
+        }
+    }
+
 }
-
-
 data class WeatherUiState(
     val isLoading: Boolean = false,
     val weather: CurrentWeatherModel? = null,
     val forecast: List<WeatherModel>? = null,
+    val hourlyForecast: List<WeatherModel>? = null,
     val errorMessage: String? = null
 )

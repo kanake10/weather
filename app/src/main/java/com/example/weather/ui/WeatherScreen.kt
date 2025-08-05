@@ -1,6 +1,8 @@
 package com.example.weather.ui
 
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection.Companion.End
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -33,6 +40,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -40,11 +48,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +84,9 @@ import com.example.weather.ui.viewmodel.WeatherViewModel
 import com.example.weather.utils.formatDate
 import com.example.weather.utils.formatTimestamp
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,7 +106,7 @@ fun WeatherScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Weather App") },
+                title = { Text("Weather") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -157,7 +171,7 @@ fun WeatherScreen(
                             text = "Current Weather",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = MaterialTheme.colorScheme.onPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                         )
                         CurrentWeatherCard(
@@ -181,9 +195,9 @@ fun WeatherScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Favorite Cities:",
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -191,17 +205,50 @@ fun WeatherScreen(
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
                     ) {
-                        items(favoriteCities) { city ->
-                            FavoriteCityCard(
-                                city = city,
-                                onClick = {
-                                    viewModel.onSearchQueryChanged(city.name)
-                                    viewModel.searchWeather()
+                        items(
+                            items = favoriteCities,
+                            key = { it.id }
+                        ) { city ->
+
+                            val swipeToDismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = {
+                                    if (it == SwipeToDismissBoxValue.EndToStart) {
+                                        favoritesViewModel.deleteFavoriteCity(city)
+                                        true // Dismiss the item visually
+                                    } else false // Prevent visual dismiss from start to end
                                 }
                             )
+
+                            SwipeToDismissBox(
+                                state = swipeToDismissState,
+                                backgroundContent = {
+                                    when (swipeToDismissState.dismissDirection) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete city",
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color.Red)
+                                                    .wrapContentSize(Alignment.CenterEnd)
+                                                    .padding(end = 16.dp),
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+                                        SwipeToDismissBoxValue.StartToEnd, SwipeToDismissBoxValue.Settled, null -> {}
+                                    }
+                                }
+                            ) {
+                                FavoriteCityCard(
+                                    city = city,
+                                    onClick = {
+                                        viewModel.onSearchQueryChanged(city.name)
+                                        viewModel.searchWeather()
+                                    }
+                                )
+                            }
                         }
                     }
-
                 }
             }
 
@@ -237,8 +284,8 @@ fun WeatherScreen(
                                                 )
                                                 favoritesViewModel.addCityToFavorites(favoriteCity)
                                                 scope.launch {
-                                                    bottomSheetState.hide()
-                                                    showBottomSheet = false
+                                                    bottomSheetState.show()
+                                                    showBottomSheet = true
                                                 }
                                             }
                                         }
@@ -267,6 +314,34 @@ fun WeatherScreen(
                                 }
                             }
 
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CurrentConditionsCard(weather = currentState.weather)
+                            }
+
+
+                            Text(
+                                text = "Today's Hourly Conditions",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+
+                            forecastState.hourlyForecast?.let { hourlyList ->
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                ) {
+                                    items(hourlyList) { item ->
+                                        HourlyForecastItem(item)
+                                    }
+                                }
+                            }
                             // City name and 5-day forecast label
                             Text(
                                 text = "$cityName 5-Day Forecast",
@@ -469,3 +544,80 @@ fun FavoriteCityCard(
     }
 }
 
+
+@Composable
+fun HourlyForecastItem(item: WeatherModel) {
+    Column(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                RoundedCornerShape(8.dp))
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val time = item.dt_txt.substring(0, 16) // "yyyy-MM-dd HH:mm"
+        val formattedTime = try {
+            val parser = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val formatter = SimpleDateFormat("h a", Locale.getDefault()) // e.g. "3 AM"
+            val date = parser.parse(time)
+            formatter.format(date ?: Date())
+        } catch (e: Exception) {
+            "N/A"
+        }
+        Text(
+            text = formattedTime,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "${item.main.temp}°C",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = item.weather.firstOrNull()?.main ?: "-",
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+@Composable
+fun CurrentConditionsCard(weather: CurrentWeatherModel?) {
+    if (weather == null) return
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .wrapContentWidth()
+            .wrapContentHeight(),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = weather.name,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "${weather.main.temp}°C",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = weather.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() }
+                ?: "No description",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = remember {
+                val currentTime = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+                    .format(java.util.Date())
+                "$currentTime"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
