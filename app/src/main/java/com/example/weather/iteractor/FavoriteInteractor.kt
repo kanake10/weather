@@ -2,7 +2,6 @@ package com.example.weather.iteractor
 
 import com.example.weather.db.dao.FavoriteCityDao
 import com.example.weather.db.entities.FavoriteCityEntity
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 interface FavoriteInteractor {

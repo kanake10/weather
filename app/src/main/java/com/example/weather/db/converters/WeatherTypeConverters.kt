@@ -1,6 +1,7 @@
 package com.example.weather.db.converters
 
 import androidx.room.TypeConverter
+import com.example.weather.api.dto.current.Coord
 import com.example.weather.api.dto.current.Main
 import com.example.weather.api.dto.current.Weather
 import com.example.weather.api.dto.current.Wind
@@ -50,5 +51,15 @@ class WeatherTypeConverters {
     fun toItemList(data: String): List<WeatherModel> {
         val type = object : TypeToken<List<WeatherModel>>() {}.type
         return gson.fromJson(data, type)
+    }
+
+    @TypeConverter
+    fun fromCoord(coord: Coord): String {
+        return gson.toJson(coord)
+    }
+
+    @TypeConverter
+    fun toCoord(coordString: String): Coord {
+        return gson.fromJson(coordString, Coord::class.java)
     }
 }

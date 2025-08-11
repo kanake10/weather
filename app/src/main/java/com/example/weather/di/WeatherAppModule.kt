@@ -8,11 +8,15 @@ import com.example.weather.db.WeatherDatabase
 import com.example.weather.db.dao.CurrentWeatherDao
 import com.example.weather.db.dao.FavoriteCityDao
 import com.example.weather.db.dao.ForecastWeatherDao
+import com.example.weather.db.dao.LocationDao
 import com.example.weather.iteractor.FavoriteInteractor
 import com.example.weather.iteractor.FavoriteInteractorImpl
+import com.example.weather.iteractor.LocationRepository
+import com.example.weather.iteractor.LocationRepositoryImpl
 import com.example.weather.iteractor.WeatherRepo
 import com.example.weather.iteractor.WeatherRepoImpl
 import com.example.weather.utils.DB
+import com.example.weather.utils.LocationManager
 import com.example.weather.utils.NetworkHelper
 import dagger.Module
 import dagger.Provides
@@ -71,6 +75,14 @@ object AppModule {
     fun provideFavoriteCityDaoDao(weatherDatabase: WeatherDatabase): FavoriteCityDao {
         return weatherDatabase.favoriteCityDao
     }
+    @Provides
+    fun provideLocationDao(weatherDatabase: WeatherDatabase): LocationDao = weatherDatabase.locationDao
+
+    @Provides
+    fun provideLocationRepository(
+        api: OpenWeatherApi,
+        dao: LocationDao
+    ): LocationRepository = LocationRepositoryImpl(api, dao)
 
     @Provides
     @Singleton
@@ -95,6 +107,12 @@ object AppModule {
     @Singleton
     fun provideNetworkHelper(@ApplicationContext context: Context): NetworkHelper {
         return NetworkHelper(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLocationManager(@ApplicationContext context: Context): LocationManager {
+        return LocationManager(context)
     }
 }
 

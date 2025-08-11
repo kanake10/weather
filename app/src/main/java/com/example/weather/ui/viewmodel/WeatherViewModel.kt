@@ -57,7 +57,7 @@ class WeatherViewModel @Inject constructor(
 
             when (val forecastResult = weatherRepo.getFiveDayWeatherCondition(query)) {
                 is Resource.Success -> {
-                    val rawForecasts = forecastResult.data ?: emptyList()
+                    val rawForecasts = forecastResult.data
                     val allItems = rawForecasts.flatMap { it.list }
                     Timber.d("Forecast fetched successfully. Items count: ${allItems.size}")
 

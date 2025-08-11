@@ -21,4 +21,12 @@ interface OpenWeatherApi {
         @Query("appid") apiKey: String = API_KEY,
         @Query("units") units: String = UNITS,
     ): ForecastResponse
+
+    @GET("weather")
+    suspend fun getConditionsBasedOnCoords(
+        @Query("appid") apiKey: String = API_KEY,
+        @Query("units") units: String = UNITS,
+        @Query("lat") lat: String,
+        @Query("lon") lon: String
+    ): WeatherResponse
 }

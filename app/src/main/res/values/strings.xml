@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">Weather</string>
+    <string name="my_location">My Location</string>
+    <string name="fav_destinations">Fav Destinations</string>
+    <string name="background_image">background image</string>
+    <string name="search_your_location">Search Your Location</string>
+    <string name="search_icon">Search icon</string>
+    <string name="delete_icon">Delete icon</string>
+    <string name="add_icon">Add icon</string>
+    <string name="close_icon">Close icon</string>
+    <string name="fav_icon">fav icon</string>
+    <string name="location_icon">location icon</string>
+    <string name="forecast_icon">forecast icon</string>
+    <string name="no_forecast">No forecast data available</string>
+    <string name="hourly_conditions">Today\'s Hourly Conditions</string>
+    <string name="forecast_title">%1$s 5-Day Forecast</string>
 </resources>

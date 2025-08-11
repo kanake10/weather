@@ -2,6 +2,7 @@ package com.example.weather.db.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.weather.api.dto.current.Coord
 import com.example.weather.api.dto.current.Main
 import com.example.weather.api.dto.current.Weather
 import com.example.weather.api.dto.current.Wind
@@ -20,6 +21,18 @@ data class CurrentWeatherModel(
 data class FavoriteCityEntity(
     val weather: List<Weather>,
     val name: String,
+    @PrimaryKey val id: Int,
+    val wind: Wind,
+    val main: Main,
+    val lastUpdated: Long
+)
+
+
+@Entity("location")
+data class LocationEntity(
+    val weather: List<Weather>,
+    val name: String,
+    val coord: Coord,
     @PrimaryKey val id: Int,
     val wind: Wind,
     val main: Main,

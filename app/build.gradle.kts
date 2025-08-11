@@ -87,6 +87,7 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(libs.timber)
+    implementation(libs.play.services.location)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
