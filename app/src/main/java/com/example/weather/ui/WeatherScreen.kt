@@ -45,6 +45,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -102,6 +106,7 @@ fun WeatherScreen(
 
     val scope = rememberCoroutineScope()
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val snackbarHostState = remember { SnackbarHostState() }
     var showBottomSheet by rememberSaveable { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -141,7 +146,8 @@ fun WeatherScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -255,8 +261,18 @@ fun WeatherScreen(
                                 confirmValueChange = {
                                     if (it == SwipeToDismissBoxValue.EndToStart) {
                                         favoritesViewModel.deleteFavoriteCity(city)
-                                        true // Dismiss the item visually
-                                    } else false // Prevent visual dismiss from start to end
+                                        scope.launch {
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = "${city.name} removed",
+                                                actionLabel = "Undo",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                favoritesViewModel.restoreLastDeletedCity()
+                                            }
+                                        }
+                                        true
+                                    } else false
                                 }
                             )
 
@@ -576,7 +592,7 @@ fun CurrentConditionsCard(weather: CurrentWeatherModel?) {
         weather?.let {
             Text(
                 text = it.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -584,7 +600,7 @@ fun CurrentConditionsCard(weather: CurrentWeatherModel?) {
         weather?.let {
             Text(
                 text = "${weather.main.temp}°C",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -592,7 +608,8 @@ fun CurrentConditionsCard(weather: CurrentWeatherModel?) {
         weather!!.weather.firstOrNull()?.description?.replaceFirstChar { it.uppercase() }?.let {
             Text(
                 text = it,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
             )
         }
         Spacer(modifier = Modifier.height(4.dp))

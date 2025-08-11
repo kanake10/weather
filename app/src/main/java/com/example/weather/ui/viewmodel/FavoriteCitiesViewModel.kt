@@ -21,6 +21,8 @@ class FavoriteCitiesViewModel @Inject constructor(
     private val _favoriteCities = MutableStateFlow<List<CurrentWeatherModel>>(emptyList())
     val favoriteCities: StateFlow<List<CurrentWeatherModel>> = _favoriteCities.asStateFlow()
 
+    private var recentlyDeletedCity: CurrentWeatherModel? = null
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -56,6 +58,7 @@ class FavoriteCitiesViewModel @Inject constructor(
     fun deleteFavoriteCity(weather: CurrentWeatherModel) {
         viewModelScope.launch {
             try {
+                recentlyDeletedCity = weather
                 repository.deleteFavoriteCity(weather)
             } catch (e: Exception) {
                 _error.value = e.message
@@ -63,11 +66,12 @@ class FavoriteCitiesViewModel @Inject constructor(
         }
     }
 
-    fun isCityFavorite(cityName: String, onResult: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            val result = repository.isCityFavorite(cityName)
-            onResult(result)
+    fun restoreLastDeletedCity() {
+        recentlyDeletedCity?.let {
+            addCityToFavorites(it)
+            recentlyDeletedCity = null
         }
     }
 }
+
 
