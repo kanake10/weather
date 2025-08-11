@@ -352,18 +352,10 @@ fun WeatherScreen(
                                         .padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    if (currentState.weather?.name!!.isNotEmpty() && !alreadyFav) {
+                                    if (!currentState.weather?.name.isNullOrEmpty() && !alreadyFav) {
                                         IconButton(onClick = {
                                             currentState.weather?.let { weather ->
-                                                val favoriteCity = FavoriteCityEntity(
-                                                    id = weather.id,
-                                                    name = weather.name,
-                                                    main = weather.main,
-                                                    wind = weather.wind,
-                                                    weather = weather.weather,
-                                                    lastUpdated = System.currentTimeMillis()
-                                                )
-                                                favoritesViewModel.addCityToFavorites(favoriteCity)
+                                                favoritesViewModel.addCityToFavorites(weather)
                                             }
                                         }) {
                                             Icon(
@@ -501,7 +493,7 @@ fun ForecastItemView(
 
 @Composable
 fun FavoriteCityCard(
-    city: FavoriteCityEntity,
+    city: CurrentWeatherModel,
     onClick: () -> Unit
 ) {
     Card(

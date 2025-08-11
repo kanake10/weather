@@ -2,12 +2,14 @@ package com.example.weather.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.weather.db.entities.FavoriteCityEntity
+import com.example.weather.db.entities.CurrentWeatherModel
 import com.example.weather.iteractor.FavoriteInteractor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -16,8 +18,8 @@ class FavoriteCitiesViewModel @Inject constructor(
     private val repository: FavoriteInteractor
 ) : ViewModel() {
 
-    private val _favoriteCities = MutableStateFlow<List<FavoriteCityEntity>>(emptyList())
-    val favoriteCities: StateFlow<List<FavoriteCityEntity>> = _favoriteCities.asStateFlow()
+    private val _favoriteCities = MutableStateFlow<List<CurrentWeatherModel>>(emptyList())
+    val favoriteCities: StateFlow<List<CurrentWeatherModel>> = _favoriteCities.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -26,39 +28,35 @@ class FavoriteCitiesViewModel @Inject constructor(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        loadFavoriteCities()
+        observeFavoriteCities()
     }
 
-    fun loadFavoriteCities() {
+    private fun observeFavoriteCities() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                _favoriteCities.value = repository.getAllFavoriteCities()
-            } catch (e: Exception) {
-                _error.value = e.message
-            } finally {
-                _isLoading.value = false
-            }
+            repository.getAllFavoriteCities()
+                .onStart { _isLoading.value = true }
+                .catch { e -> _error.value = e.message }
+                .collect { cities ->
+                    _favoriteCities.value = cities
+                    _isLoading.value = false
+                }
         }
     }
 
-    fun addCityToFavorites(city: FavoriteCityEntity) {
+    fun addCityToFavorites(weather: CurrentWeatherModel) {
         viewModelScope.launch {
             try {
-                repository.addFavoriteCity(city)
-                loadFavoriteCities()
+                repository.addFavoriteCity(weather)
             } catch (e: Exception) {
                 _error.value = e.message
             }
         }
     }
 
-    fun deleteFavoriteCity(city: FavoriteCityEntity) {
+    fun deleteFavoriteCity(weather: CurrentWeatherModel) {
         viewModelScope.launch {
             try {
-                repository.deleteFavoriteCity(city)
-                loadFavoriteCities()
+                repository.deleteFavoriteCity(weather)
             } catch (e: Exception) {
                 _error.value = e.message
             }
@@ -72,3 +70,4 @@ class FavoriteCitiesViewModel @Inject constructor(
         }
     }
 }
+

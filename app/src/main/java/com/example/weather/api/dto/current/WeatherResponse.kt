@@ -1,6 +1,7 @@
 package com.example.weather.api.dto.current
 
 import com.example.weather.db.entities.CurrentWeatherModel
+import com.example.weather.db.entities.FavoriteCityEntity
 import com.example.weather.db.entities.LocationEntity
 
 data class WeatherResponse(
@@ -39,6 +40,30 @@ fun WeatherResponse.toLocationEntity(): LocationEntity {
         id = this.id,
         wind = this.wind,
         main = this.main,
+        lastUpdated = System.currentTimeMillis()
+    )
+}
+
+fun CurrentWeatherModel.toFavoriteCityEntity(
+    timestamp: Long = System.currentTimeMillis()
+): FavoriteCityEntity {
+    return FavoriteCityEntity(
+        id = id,
+        name = name.orEmpty(),
+        main = main,
+        wind = wind,
+        weather = weather,
+        lastUpdated = timestamp
+    )
+}
+
+fun FavoriteCityEntity.toCurrentWeatherModel(): CurrentWeatherModel {
+    return CurrentWeatherModel(
+        id = id,
+        name = name,
+        main = main,
+        wind = wind,
+        weather = weather,
         lastUpdated = System.currentTimeMillis()
     )
 }
