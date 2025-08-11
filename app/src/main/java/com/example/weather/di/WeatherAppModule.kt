@@ -81,8 +81,9 @@ object AppModule {
     @Provides
     fun provideLocationRepository(
         api: OpenWeatherApi,
-        dao: LocationDao
-    ): LocationRepository = LocationRepositoryImpl(api, dao)
+        dao: LocationDao,
+        networkHelper: NetworkHelper
+    ): LocationRepository = LocationRepositoryImpl(api, dao, networkHelper)
 
     @Provides
     @Singleton

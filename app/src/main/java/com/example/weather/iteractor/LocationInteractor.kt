@@ -4,6 +4,7 @@ import com.example.weather.api.OpenWeatherApi
 import com.example.weather.api.dto.current.toLocationEntity
 import com.example.weather.db.dao.LocationDao
 import com.example.weather.db.entities.LocationEntity
+import com.example.weather.utils.NetworkHelper
 import kotlinx.coroutines.flow.Flow
 
 interface LocationRepository {
@@ -13,15 +14,21 @@ interface LocationRepository {
 
 class LocationRepositoryImpl(
     private val api: OpenWeatherApi,
-    private val dao: LocationDao
+    private val dao: LocationDao,
+    private val networkHelper: NetworkHelper
 ) : LocationRepository {
 
     override val weather: Flow<List<LocationEntity>> = dao.getWeather()
 
     override suspend fun fetchWeather(lat: String, lon: String) {
+        if (!networkHelper.isConnected()) {
+            throw Exception("No internet connection.")
+        }
+
         val response = api.getConditionsBasedOnCoords(lat = lat, lon = lon)
         val entity = response.toLocationEntity()
         dao.clearWeather()
         dao.insertWeather(entity)
     }
 }
+
